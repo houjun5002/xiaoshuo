@@ -65,6 +65,7 @@ export default function AdminPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({ password: adminPassword }),
       });
 
@@ -87,7 +88,9 @@ export default function AdminPage() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('/api/admin/stats');
+      const response = await fetch('/api/admin/stats', {
+        credentials: 'include',
+      });
 
       if (response.ok) {
         const data = await response.json();
@@ -116,6 +119,7 @@ export default function AdminPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           userId: deleteUserId,
           password: deletePassword,

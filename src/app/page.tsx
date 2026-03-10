@@ -70,6 +70,7 @@ export default function Home() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // 包含 Cookie
         body: JSON.stringify({
           type: selectedType,
           input: userInput,
