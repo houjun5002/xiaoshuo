@@ -85,11 +85,11 @@ export function AuthDialog({ open, onOpenChange, defaultTab = 'login' }: AuthDia
           <TabsContent value="login">
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="login-account">手机号/邮箱</Label>
+                <Label htmlFor="login-account">手机号</Label>
                 <Input
                   id="login-account"
                   type="text"
-                  placeholder="请输入手机号或邮箱"
+                  placeholder="请输入手机号"
                   value={loginAccount}
                   onChange={(e) => setLoginAccount(e.target.value)}
                   required
