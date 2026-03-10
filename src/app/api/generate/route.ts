@@ -17,6 +17,45 @@ const systemPrompts: Record<string, string> = {
 
 const FREE_DAILY_QUOTA = 3; // 免费用户每日 3 次
 
+// 敏感词列表
+const SENSITIVE_KEYWORDS = [
+  '台湾',
+  '台独',
+  '统一',
+  '独立',
+  '一国两制',
+  '大陆',
+  '台湾问题',
+  '两岸',
+  '统一中国',
+  '台湾独立',
+  '分裂国家',
+  '中国统一',
+  '台湾海峡',
+  '台海',
+  '中华民国',
+  '民选政府',
+  '政治体制',
+  '政党',
+  '选举',
+  '政治',
+  '政府',
+  '领导人',
+  '政策',
+  '意识形态',
+  '政治改革',
+];
+
+// 检查内容是否包含敏感词
+function containsSensitiveContent(text: string): boolean {
+  for (const keyword of SENSITIVE_KEYWORDS) {
+    if (text.includes(keyword)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { type, input, token }: GenerateRequest = await request.json();
@@ -25,6 +64,14 @@ export async function POST(request: NextRequest) {
     if (!type || !input) {
       return new Response(
         JSON.stringify({ error: '缺少必要参数' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // 检查内容是否包含敏感词
+    if (containsSensitiveContent(input)) {
+      return new Response(
+        JSON.stringify({ error: '您的创作需求涉及敏感内容，请换一个需求' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
