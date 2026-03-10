@@ -41,8 +41,13 @@ export async function POST(request: NextRequest) {
     });
 
     if (error) {
+      // 将英文错误提示转为中文
+      let errorMessage = error.message;
+      if (errorMessage === 'Invalid login credentials') {
+        errorMessage = '账号或密码错误';
+      }
       return NextResponse.json(
-        { error: error.message },
+        { error: errorMessage },
         { status: 401 }
       );
     }
