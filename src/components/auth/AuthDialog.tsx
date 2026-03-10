@@ -45,7 +45,12 @@ export function AuthDialog({ open, onOpenChange, defaultTab = 'login' }: AuthDia
       await login(loginAccount, loginPassword);
       onOpenChange(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '登录失败');
+      let errorMessage = err instanceof Error ? err.message : '登录失败';
+      // 将"用户不存在或已被删除"替换为更友好的提示
+      if (errorMessage === '用户不存在或已被删除') {
+        errorMessage = '账号或密码错误';
+      }
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -60,7 +65,12 @@ export function AuthDialog({ open, onOpenChange, defaultTab = 'login' }: AuthDia
       await register(registerPhone, registerPassword, registerUsername);
       onOpenChange(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '注册失败');
+      let errorMessage = err instanceof Error ? err.message : '注册失败';
+      // 将"用户不存在或已被删除"替换为更友好的提示
+      if (errorMessage === '用户不存在或已被删除') {
+        errorMessage = '账号或密码错误';
+      }
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
