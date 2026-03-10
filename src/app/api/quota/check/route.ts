@@ -5,21 +5,34 @@ const FREE_DAILY_QUOTA = 3; // 免费用户每日 3 次
 
 export async function POST(request: NextRequest) {
   try {
-    const { token } = await request.json();
+    // 尝试解析请求体，如果为空则忽略
+    let token: string | undefined;
+    try {
+      const body = await request.json();
+      token = body.token;
+    } catch (e) {
+      // 请求体为空或无效，忽略
+    }
 
     // 从请求头获取真实 IP 地址
     const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0] ||
                        request.headers.get('x-real-ip') ||
                        '127.0.0.1';
 
+    // 优先从 Cookie 获取 token，其次从请求体获取
+    let authToken = request.cookies.get('auth_token')?.value;
+    if (!authToken && token) {
+      authToken = token;
+    }
+
     // 初始化 Supabase 客户端
-    const supabase = token ? getSupabaseClient(token) : getSupabaseClient();
+    const supabase = authToken ? getSupabaseClient(authToken) : getSupabaseClient();
 
     let userId: string | null = null;
     let dailyQuota = FREE_DAILY_QUOTA;
 
     // 如果有 token，检查用户信息
-    if (token) {
+    if (authToken) {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
 
       if (!userError && user) {
