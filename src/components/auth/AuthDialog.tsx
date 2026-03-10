@@ -66,10 +66,8 @@ export function AuthDialog({ open, onOpenChange, defaultTab = 'login' }: AuthDia
       onOpenChange(false);
     } catch (err) {
       let errorMessage = err instanceof Error ? err.message : '注册失败';
-      // 将"用户不存在或已被删除"替换为更友好的提示
-      if (errorMessage === '用户不存在或已被删除') {
-        errorMessage = '账号或密码错误';
-      }
+      // 注册时不需要转换错误提示，直接显示后端返回的错误信息
+      // 例如："该手机号/邮箱已注册"会保持原样显示
       setError(errorMessage);
     } finally {
       setIsLoading(false);
