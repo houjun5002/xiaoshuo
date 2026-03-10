@@ -13,6 +13,19 @@ function phoneToEmail(phone: string): string {
   return `${phone}@phone.local`;
 }
 
+// 错误消息映射（英文 -> 中文）
+function translateAuthError(message: string): string {
+  const errorMap: Record<string, string> = {
+    'User already registered': '该手机号/邮箱已注册',
+    'Email not confirmed': '请先确认邮箱',
+    'Invalid email': '邮箱格式不正确',
+    'Password should be at least 6 characters': '密码至少需要6个字符',
+    'Signups not allowed': '不允许注册新用户',
+  };
+
+  return errorMap[message] || message;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { account, password, username } = await request.json();
@@ -48,7 +61,7 @@ export async function POST(request: NextRequest) {
 
     if (authError) {
       return NextResponse.json(
-        { error: authError.message },
+        { error: translateAuthError(authError.message) },
         { status: 400 }
       );
     }
