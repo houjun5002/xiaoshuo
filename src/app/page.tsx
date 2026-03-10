@@ -47,7 +47,7 @@ const creationTypes: CreationTypeConfig[] = [
 ];
 
 export default function Home() {
-  const { user, token, logout, todayUsage, dailyQuota, fetchUser } = useAuth();
+  const { user, token, logout, todayUsage, dailyQuota, refreshQuota } = useAuth();
   const [selectedType, setSelectedType] = useState<CreationType | ''>('');
   const [userInput, setUserInput] = useState('');
   const [result, setResult] = useState('');
@@ -102,7 +102,7 @@ export default function Home() {
       }
 
       // 生成完成后刷新使用次数
-      await fetchUser();
+      await refreshQuota();
     } catch (error) {
       console.error('Error:', error);
       setResult('生成失败，请稍后重试。');

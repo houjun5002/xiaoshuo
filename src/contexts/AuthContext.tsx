@@ -21,6 +21,7 @@ interface AuthContextType {
   todayUsage: number;
   dailyQuota: number;
   fetchUser: () => Promise<void>;
+  refreshQuota: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -71,6 +72,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.error('Failed to fetch user:', error);
+    }
+  };
+
+  // 刷新配额（适用于登录和未登录用户）
+  const refreshQuota = async () => {
+    const savedToken = localStorage.getItem('token');
+
+    if (savedToken) {
+      // 登录用户：使用 /api/auth/me
+      try {
+        const response = await fetch('/api/auth/me', {
+          headers: {
+            'Authorization': `Bearer ${savedToken}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setUser(data.user);
+          setTodayUsage(data.todayUsage);
+          setDailyQuota(data.dailyQuota);
+        }
+      } catch (error) {
+        console.error('Failed to refresh quota:', error);
+      }
+    } else {
+      // 未登录用户：使用 /api/quota/check
+      try {
+        const response = await fetch('/api/quota/check', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            token: '',
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setTodayUsage(data.todayUsage);
+          setDailyQuota(data.dailyQuota);
+        }
+      } catch (error) {
+        console.error('Failed to refresh quota:', error);
+      }
     }
   };
 
@@ -150,6 +197,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         todayUsage,
         dailyQuota,
         fetchUser,
+        refreshQuota,
       }}
     >
       {children}

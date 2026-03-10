@@ -5,7 +5,12 @@ const FREE_DAILY_QUOTA = 5; // 免费用户每日 5 次
 
 export async function POST(request: NextRequest) {
   try {
-    const { token, ipAddress } = await request.json();
+    const { token } = await request.json();
+
+    // 从请求头获取真实 IP 地址
+    const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0] ||
+                       request.headers.get('x-real-ip') ||
+                       '127.0.0.1';
 
     // 初始化 Supabase 客户端
     const supabase = token ? getSupabaseClient(token) : getSupabaseClient();
