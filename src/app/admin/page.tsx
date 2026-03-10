@@ -166,9 +166,6 @@ export default function AdminPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              请使用管理员账户 (houjun5002@163.com) 登录后访问
-            </p>
             <Button onClick={() => window.location.href = '/'} className="w-full">
               <Home className="w-4 h-4 mr-2" />
               返回首页
@@ -200,15 +197,12 @@ export default function AdminPage() {
                 <Input
                   id="admin-password"
                   type="password"
-                  placeholder="请输入 16 位管理员密码"
+                  placeholder="请输入管理员密码"
                   value={adminPassword}
                   onChange={(e) => setAdminPassword(e.target.value)}
                   required
                   maxLength={16}
                 />
-                <p className="text-xs text-muted-foreground">
-                  管理员邮箱：{ADMIN_EMAIL}
-                </p>
               </div>
               <div className="flex gap-2">
                 <Button
