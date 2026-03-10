@@ -40,6 +40,14 @@ export async function GET(request: NextRequest) {
       .eq('id', user.id)
       .single();
 
+    // 如果 profile 不存在，说明用户已被删除，返回401强制登出
+    if (!profile || profileError) {
+      return NextResponse.json(
+        { error: '用户不存在或已被删除' },
+        { status: 401 }
+      );
+    }
+
     // 获取今日使用次数
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -52,9 +60,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       user,
-      profile: profile || null,
+      profile,
       todayUsage: count || 0,
-      dailyQuota: profile?.daily_quota || 10,
+      dailyQuota: profile.daily_quota || 10,
     });
   } catch (error) {
     console.error('Get user error:', error);
