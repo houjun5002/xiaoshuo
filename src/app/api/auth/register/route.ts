@@ -49,10 +49,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
+    // 设置 httpOnly Cookie（如果 session 存在）
+    const response = NextResponse.json({
       message: '注册成功',
       user: authData.user,
     });
+
+    if (authData.session) {
+      response.cookies.set('auth_token', authData.session.access_token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7, // 7 天
+        path: '/',
+      });
+    }
+
+    return response;
   } catch (error) {
     console.error('Registration error:', error);
     return NextResponse.json(

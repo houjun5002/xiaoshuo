@@ -33,31 +33,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [todayUsage, setTodayUsage] = useState(0);
   const [dailyQuota, setDailyQuota] = useState(3);
 
-  // 从 localStorage 加载 token
+  // 初始化时检查用户登录状态（通过 Cookie）
   useEffect(() => {
-    const savedToken = localStorage.getItem('token');
-    if (savedToken) {
-      setToken(savedToken);
-    }
-    setIsLoading(false);
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/me');
+        if (response.ok) {
+          const data = await response.json();
+          setUser(data.user);
+          setTodayUsage(data.todayUsage);
+          setDailyQuota(data.dailyQuota);
+          setToken('cookie-based'); // 标记为基于 Cookie 的认证
+        } else {
+          setUser(null);
+          setTodayUsage(0);
+          setDailyQuota(3);
+        }
+      } catch (error) {
+        console.error('Failed to check auth:', error);
+        setUser(null);
+        setTodayUsage(0);
+        setDailyQuota(3);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
   }, []);
 
-  // 获取用户信息
+  // 获取用户信息（通过 Cookie）
   const fetchUser = async () => {
-    const savedToken = localStorage.getItem('token');
-    if (!savedToken) {
-      setUser(null);
-      setTodayUsage(0);
-      setDailyQuota(3);
-      return;
-    }
-
     try {
-      const response = await fetch('/api/auth/me', {
-        headers: {
-          'Authorization': `Bearer ${savedToken}`,
-        },
-      });
+      const response = await fetch('/api/auth/me');
 
       if (response.ok) {
         const data = await response.json();
@@ -65,10 +73,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setTodayUsage(data.todayUsage);
         setDailyQuota(data.dailyQuota);
       } else {
-        // Token 无效，清除本地存储
-        localStorage.removeItem('token');
         setUser(null);
-        setToken(null);
+        setTodayUsage(0);
+        setDailyQuota(3);
       }
     } catch (error) {
       console.error('Failed to fetch user:', error);
@@ -77,16 +84,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // 刷新配额（适用于登录和未登录用户）
   const refreshQuota = async () => {
-    const savedToken = localStorage.getItem('token');
-
-    if (savedToken) {
+    if (user) {
       // 登录用户：使用 /api/auth/me
       try {
-        const response = await fetch('/api/auth/me', {
-          headers: {
-            'Authorization': `Bearer ${savedToken}`,
-          },
-        });
+        const response = await fetch('/api/auth/me');
 
         if (response.ok) {
           const data = await response.json();
@@ -105,9 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            token: '',
-          }),
+          body: JSON.stringify({}),
         });
 
         if (response.ok) {
@@ -120,13 +119,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
   };
-
-  // 当 token 变化时获取用户信息
-  useEffect(() => {
-    if (token) {
-      fetchUser();
-    }
-  }, [token]);
 
   const login = async (email: string, password: string) => {
     const response = await fetch('/api/auth/login', {
@@ -141,9 +133,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error(data.error || '登录失败');
     }
 
-    setToken(data.session.access_token);
-    localStorage.setItem('token', data.session.access_token);
-    setUser(data.user);
+    // Cookie 由后端自动设置，前端只需要获取用户信息
+    await fetchUser();
   };
 
   const register = async (email: string, password: string, username: string) => {
@@ -159,30 +150,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error(data.error || '注册失败');
     }
 
-    // 注册成功后自动登录
-    setToken(data.session?.access_token);
-    if (data.session?.access_token) {
-      localStorage.setItem('token', data.session.access_token);
-    }
-    setUser(data.user);
+    // Cookie 由后端自动设置（如果有 session），前端只需要获取用户信息
+    await fetchUser();
   };
 
   const logout = async () => {
-    if (token) {
-      try {
-        await fetch('/api/auth/logout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token }),
-        });
-      } catch (error) {
-        console.error('Logout error:', error);
-      }
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (error) {
+      console.error('Logout error:', error);
     }
 
-    setToken(null);
     setUser(null);
-    localStorage.removeItem('token');
+    setToken(null);
+    setTodayUsage(0);
+    setDailyQuota(3);
   };
 
   return (

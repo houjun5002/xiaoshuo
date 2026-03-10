@@ -3,16 +3,22 @@ import { getSupabaseClient } from '@/storage/database/supabase-client';
 
 export async function GET(request: NextRequest) {
   try {
-    // 从请求头获取认证令牌
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // 优先从 Cookie 获取 token，其次从 Authorization header 获取
+    let token = request.cookies.get('auth_token')?.value;
+
+    if (!token) {
+      const authHeader = request.headers.get('authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.replace('Bearer ', '');
+      }
+    }
+
+    if (!token) {
       return NextResponse.json(
         { error: '未授权' },
         { status: 401 }
       );
     }
-
-    const token = authHeader.replace('Bearer ', '');
 
     // 验证用户身份和管理员权限
     const supabase = getSupabaseClient(token);

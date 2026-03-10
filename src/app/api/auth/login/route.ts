@@ -36,12 +36,23 @@ export async function POST(request: NextRequest) {
       .eq('id', data.user.id)
       .single();
 
-    return NextResponse.json({
+    // 设置 httpOnly Cookie 用于认证
+    const response = NextResponse.json({
       message: '登录成功',
       user: data.user,
       profile: profile || null,
-      session: data.session,
     });
+
+    // 设置认证 Cookie
+    response.cookies.set('auth_token', data.session.access_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 7 天
+      path: '/',
+    });
+
+    return response;
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json(

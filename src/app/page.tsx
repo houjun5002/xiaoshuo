@@ -73,7 +73,6 @@ export default function Home() {
         body: JSON.stringify({
           type: selectedType,
           input: userInput,
-          token: token || undefined,
         }),
       });
 

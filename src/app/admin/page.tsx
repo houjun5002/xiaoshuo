@@ -58,7 +58,6 @@ export default function AdminPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ password: adminPassword }),
       });
@@ -82,11 +81,7 @@ export default function AdminPage() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('/api/admin/stats', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      const response = await fetch('/api/admin/stats');
 
       if (response.ok) {
         const data = await response.json();
