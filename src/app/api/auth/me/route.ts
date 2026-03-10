@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
       user,
       profile: profile || null,
       todayUsage: count || 0,
-      dailyQuota: profile?.daily_quota || 20,
+      dailyQuota: profile?.daily_quota || 10,
     });
   } catch (error) {
     console.error('Get user error:', error);
