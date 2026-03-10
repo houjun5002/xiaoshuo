@@ -28,11 +28,11 @@ export function AuthDialog({ open, onOpenChange, defaultTab = 'login' }: AuthDia
   const [error, setError] = useState('');
 
   // 登录表单
-  const [loginEmail, setLoginEmail] = useState('');
+  const [loginAccount, setLoginAccount] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
 
   // 注册表单
-  const [registerEmail, setRegisterEmail] = useState('');
+  const [registerPhone, setRegisterPhone] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [registerUsername, setRegisterUsername] = useState('');
 
@@ -42,7 +42,7 @@ export function AuthDialog({ open, onOpenChange, defaultTab = 'login' }: AuthDia
     setError('');
 
     try {
-      await login(loginEmail, loginPassword);
+      await login(loginAccount, loginPassword);
       onOpenChange(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : '登录失败');
@@ -57,7 +57,7 @@ export function AuthDialog({ open, onOpenChange, defaultTab = 'login' }: AuthDia
     setError('');
 
     try {
-      await register(registerEmail, registerPassword, registerUsername);
+      await register(registerPhone, registerPassword, registerUsername);
       onOpenChange(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : '注册失败');
@@ -85,13 +85,13 @@ export function AuthDialog({ open, onOpenChange, defaultTab = 'login' }: AuthDia
           <TabsContent value="login">
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="login-email">邮箱</Label>
+                <Label htmlFor="login-account">手机号/邮箱</Label>
                 <Input
-                  id="login-email"
-                  type="email"
-                  placeholder="your@email.com"
-                  value={loginEmail}
-                  onChange={(e) => setLoginEmail(e.target.value)}
+                  id="login-account"
+                  type="text"
+                  placeholder="请输入手机号或邮箱"
+                  value={loginAccount}
+                  onChange={(e) => setLoginAccount(e.target.value)}
                   required
                 />
               </div>
@@ -128,14 +128,16 @@ export function AuthDialog({ open, onOpenChange, defaultTab = 'login' }: AuthDia
           <TabsContent value="register">
             <form onSubmit={handleRegister} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="register-email">邮箱</Label>
+                <Label htmlFor="register-phone">手机号</Label>
                 <Input
-                  id="register-email"
-                  type="email"
-                  placeholder="your@email.com"
-                  value={registerEmail}
-                  onChange={(e) => setRegisterEmail(e.target.value)}
+                  id="register-phone"
+                  type="tel"
+                  placeholder="请输入手机号"
+                  value={registerPhone}
+                  onChange={(e) => setRegisterPhone(e.target.value)}
                   required
+                  pattern="^1[3-9]\d{9}$"
+                  title="请输入正确的手机号"
                 />
               </div>
               <div className="space-y-2">

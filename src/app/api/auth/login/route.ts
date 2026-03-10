@@ -1,24 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 
+// 判断是否为手机号
+function isPhoneNumber(input: string): boolean {
+  // 中国大陆手机号：1开头，11位数字
+  const chinaPhoneRegex = /^1[3-9]\d{9}$/;
+  return chinaPhoneRegex.test(input);
+}
+
+// 将手机号转换为邮箱格式用于 Supabase Auth
+function phoneToEmail(phone: string): string {
+  return `${phone}@phone.local`;
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json();
+    const { account, password } = await request.json();
 
     // 验证输入
-    if (!email || !password) {
+    if (!account || !password) {
       return NextResponse.json(
-        { error: '邮箱和密码不能为空' },
+        { error: '账号和密码不能为空' },
         { status: 400 }
       );
     }
+
+    // 判断是手机号还是邮箱
+    const isPhone = isPhoneNumber(account);
+
+    // 如果是手机号，转换为邮箱格式
+    const authEmail = isPhone ? phoneToEmail(account) : account;
 
     // 初始化 Supabase 客户端
     const supabase = getSupabaseClient();
 
     // 登录用户
     const { data, error } = await supabase.auth.signInWithPassword({
-      email,
+      email: authEmail,
       password,
     });
 
