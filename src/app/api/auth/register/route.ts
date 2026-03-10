@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
         .insert({
           id: authData.user.id,
           username,
-          daily_quota: 20, // 登录用户默认 20 次/天
+          daily_quota: 10, // 登录用户默认 10 次/天
         });
 
       if (profileError) {

@@ -15,7 +15,7 @@ const systemPrompts: Record<string, string> = {
   outline: '你是专业的小说创作助手，擅长搭建小说大纲。请根据用户的需求，生成包含「核心主题、故事线、关键情节节点、人物关系、结局走向」的完整小说大纲，结构清晰，逻辑连贯。',
 };
 
-const FREE_DAILY_QUOTA = 5; // 免费用户每日 5 次
+const FREE_DAILY_QUOTA = 3; // 免费用户每日 3 次
 
 export async function POST(request: NextRequest) {
   try {

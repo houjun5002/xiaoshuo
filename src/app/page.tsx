@@ -184,7 +184,7 @@ export default function Home() {
             {quotaExceeded && (
               <div className="mt-4 p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
                 <p className="text-sm text-orange-600 dark:text-orange-400">
-                  今日配额已用尽！{user ? '请联系管理员增加配额' : '登录后可获得更多使用次数（20次/天）'}
+                  今日配额已用尽！{user ? '请联系管理员增加配额' : '登录后可获得更多使用次数（10次/天）'}
                 </p>
                 {!user && (
                   <Button

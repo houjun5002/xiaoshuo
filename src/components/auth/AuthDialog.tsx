@@ -178,7 +178,7 @@ export function AuthDialog({ open, onOpenChange, defaultTab = 'login' }: AuthDia
                 )}
               </Button>
               <p className="text-xs text-center text-muted-foreground">
-                注册后每日可使用 20 次（免费用户 5 次）
+                注册后每日可使用 10 次（免费用户 3 次）
               </p>
             </form>
           </TabsContent>

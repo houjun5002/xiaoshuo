@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [todayUsage, setTodayUsage] = useState(0);
-  const [dailyQuota, setDailyQuota] = useState(5);
+  const [dailyQuota, setDailyQuota] = useState(3);
 
   // 从 localStorage 加载 token
   useEffect(() => {
@@ -48,7 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!savedToken) {
       setUser(null);
       setTodayUsage(0);
-      setDailyQuota(5);
+      setDailyQuota(3);
       return;
     }
 
