@@ -1,0 +1,357 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useAuth } from '@/contexts/AuthContext';
+import { Shield, Users, Activity, TrendingUp, BarChart3, Home, LogOut } from 'lucide-react';
+
+interface StatsData {
+  userStats: {
+    totalUsers: number;
+    todayNewUsers: number;
+    activeUsers: number;
+  };
+  visitStats: {
+    totalVisits: number;
+    todayVisits: number;
+    todayByType: Record<string, number>;
+  };
+  trend: Array<{ date: string; count: number }>;
+  usersList: Array<{
+    id: string;
+    username: string | null;
+    created_at: string;
+    daily_quota: number;
+  }>;
+}
+
+const ADMIN_EMAIL = 'houjun5002@163.com';
+
+export default function AdminPage() {
+  const { user, token, logout } = useAuth();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [stats, setStats] = useState<StatsData | null>(null);
+
+  // 检查用户邮箱是否为管理员
+  const isAdminUser = user?.email === ADMIN_EMAIL;
+
+  // 从 localStorage 加载管理员 token
+  useEffect(() => {
+    const adminToken = localStorage.getItem('adminToken');
+    if (adminToken) {
+      setIsAuthenticated(true);
+      fetchStats();
+    }
+  }, []);
+
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/admin/auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ password: adminPassword }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        localStorage.setItem('adminToken', data.adminToken);
+        setIsAuthenticated(true);
+        fetchStats();
+      } else {
+        alert(data.error || '管理员验证失败');
+      }
+    } catch (error) {
+      console.error('Admin login error:', error);
+      alert('管理员验证失败');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchStats = async () => {
+    try {
+      const response = await fetch('/api/admin/stats', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setStats(data);
+      } else {
+        const errorData = await response.json();
+        alert(errorData.error || '获取统计数据失败');
+      }
+    } catch (error) {
+      console.error('Fetch stats error:', error);
+      alert('获取统计数据失败');
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('adminToken');
+    setIsAuthenticated(false);
+    setStats(null);
+  };
+
+  // 未登录或不是管理员用户
+  if (!user || !isAdminUser) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
+        <Card className="max-w-md w-full border-red-200 dark:border-red-800">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-600">
+              <Shield className="w-6 h-6" />
+              访问被拒绝
+            </CardTitle>
+            <CardDescription>
+              只有管理员才能访问此页面
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              请使用管理员账户 (houjun5002@163.com) 登录后访问
+            </p>
+            <Button onClick={() => window.location.href = '/'} className="w-full">
+              <Home className="w-4 h-4 mr-2" />
+              返回首页
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // 未输入管理员密码
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
+        <Card className="max-w-md w-full border-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="w-6 h-6" />
+              管理员验证
+            </CardTitle>
+            <CardDescription>
+              请输入管理员密码以访问管理后台
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleAdminLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="admin-password">管理员密码</Label>
+                <Input
+                  id="admin-password"
+                  type="password"
+                  placeholder="请输入 16 位管理员密码"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  required
+                  maxLength={16}
+                />
+                <p className="text-xs text-muted-foreground">
+                  管理员邮箱：{ADMIN_EMAIL}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="submit"
+                  className="flex-1"
+                  disabled={isLoading}
+                >
+                  {isLoading ? '验证中...' : '验证'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => window.location.href = '/'}
+                >
+                  <Home className="w-4 h-4" />
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // 管理员仪表盘
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      {/* 顶部导航 */}
+      <div className="border-b bg-white/50 dark:bg-gray-800/50 backdrop-blur">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Shield className="w-8 h-8 text-blue-600" />
+            <h1 className="text-2xl font-bold">管理后台</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">
+              {user.user_metadata?.username || user.email}
+            </span>
+            <Button variant="outline" size="sm" onClick={handleLogout}>
+              <LogOut className="w-4 h-4 mr-2" />
+              退出管理
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => window.location.href = '/'}>
+              <Home className="w-4 h-4 mr-2" />
+              返回首页
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-8">
+        {stats ? (
+          <>
+            {/* 统计卡片 */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">总用户数</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">{stats.userStats.totalUsers}</div>
+                  <p className="text-xs text-muted-foreground">
+                    今日新增：{stats.userStats.todayNewUsers}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">活跃用户</CardTitle>
+                  <Activity className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">{stats.userStats.activeUsers}</div>
+                  <p className="text-xs text-muted-foreground">
+                    今日有使用记录的用户
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">总访问次数</CardTitle>
+                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">{stats.visitStats.totalVisits}</div>
+                  <p className="text-xs text-muted-foreground">
+                    今日：{stats.visitStats.todayVisits}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">今日使用类型</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {Object.keys(stats.visitStats.todayByType).length}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {Object.entries(stats.visitStats.todayByType)
+                      .map(([type, count]) => `${type}: ${count}`)
+                      .join(', ')}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* 访问趋势 */}
+            <Card className="mb-8">
+              <CardHeader>
+                <CardTitle>最近 7 天访问趋势</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {stats.trend.map((item, index) => (
+                    <div key={index} className="flex items-center gap-4">
+                      <div className="w-24 text-sm text-muted-foreground">
+                        {item.date}
+                      </div>
+                      <div className="flex-1 h-8 bg-muted rounded-lg overflow-hidden">
+                        <div
+                          className="h-full bg-blue-600 rounded-lg transition-all"
+                          style={{
+                            width: `${Math.max(0, (item.count / Math.max(...stats.trend.map(t => t.count))) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                      <div className="w-16 text-right font-semibold">
+                        {item.count} 次
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 最新用户列表 */}
+            <Card>
+              <CardHeader>
+                <CardTitle>最新用户（前 10 个）</CardTitle>
+                <CardDescription>
+                  最近注册的用户列表
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {stats.usersList.map((userItem, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                    >
+                      <div>
+                        <div className="font-medium">
+                          {userItem.username || '未设置用户名'}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          ID: {userItem.id}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm">
+                          每日配额：{userItem.daily_quota} 次
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(userItem.created_at).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        ) : (
+          <div className="text-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">加载统计数据中...</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+import { Loader2 } from 'lucide-react';

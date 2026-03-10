@@ -13,6 +13,7 @@ export const profiles = pgTable("profiles", {
 	id: varchar("id", { length: 36 }).primaryKey(), // 关联 auth.users.id
 	username: varchar("username", { length: 128 }),
 	avatar_url: varchar("avatar_url", { length: 500 }),
+	is_admin: integer("is_admin").notNull().default(0), // 是否管理员：0-否，1-是
 	daily_quota: integer("daily_quota").notNull().default(20), // 登录用户每日配额
 	created_at: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 	updated_at: timestamp("updated_at", { withTimezone: true, mode: 'string' }),
