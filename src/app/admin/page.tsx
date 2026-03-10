@@ -119,7 +119,6 @@ export default function AdminPage() {
         body: JSON.stringify({
           userId: deleteUserId,
           password: deletePassword,
-          userToken: token, // 使用用户 token
         }),
       });
 

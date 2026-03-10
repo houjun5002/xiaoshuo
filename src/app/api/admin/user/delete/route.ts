@@ -7,13 +7,23 @@ const ADMIN_PASSWORD_HASH = '2637a5c30af69a7b'; // 对应密码：Admin123!
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, password, userToken } = await request.json();
+    const { userId, password } = await request.json();
 
     // 验证参数
-    if (!userId || !password || !userToken) {
+    if (!userId || !password) {
       return NextResponse.json(
         { error: '缺少必要参数' },
         { status: 400 }
+      );
+    }
+
+    // 从 Cookie 获取用户 token
+    const userToken = request.cookies.get('auth_token')?.value;
+
+    if (!userToken) {
+      return NextResponse.json(
+        { error: '用户未登录' },
+        { status: 401 }
       );
     }
 
