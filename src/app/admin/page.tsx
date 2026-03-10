@@ -40,6 +40,7 @@ export default function AdminPage() {
   const [stats, setStats] = useState<StatsData | null>(null);
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
   const [deleteUserName, setDeleteUserName] = useState<string>('');
+  const [deletePassword, setDeletePassword] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
 
   // 检查用户邮箱是否为管理员
@@ -102,12 +103,14 @@ export default function AdminPage() {
   };
 
   const handleDeleteUser = async () => {
-    if (!deleteUserId) return;
+    if (!deleteUserId || !deletePassword) {
+      alert('请输入管理员密码');
+      return;
+    }
 
     setIsDeleting(true);
 
     try {
-      const adminToken = localStorage.getItem('adminToken');
       const response = await fetch('/api/admin/user/delete', {
         method: 'POST',
         headers: {
@@ -115,7 +118,8 @@ export default function AdminPage() {
         },
         body: JSON.stringify({
           userId: deleteUserId,
-          adminToken,
+          password: deletePassword,
+          userToken: token, // 使用用户 token
         }),
       });
 
@@ -125,6 +129,7 @@ export default function AdminPage() {
         alert(`用户 ${deleteUserName} 删除成功`);
         setDeleteUserId(null);
         setDeleteUserName('');
+        setDeletePassword('');
         fetchStats(); // 刷新列表
       } else {
         alert(data.error || '删除用户失败');
@@ -400,17 +405,36 @@ export default function AdminPage() {
       </div>
 
       {/* 删除确认对话框 */}
-      <AlertDialog open={!!deleteUserId} onOpenChange={(open) => !open && setDeleteUserId(null)}>
+      <AlertDialog open={!!deleteUserId} onOpenChange={(open) => {
+        if (!open) {
+          setDeleteUserId(null);
+          setDeleteUserName('');
+          setDeletePassword('');
+        }
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-destructive">
               <AlertCircle className="w-5 h-5" />
               确认删除用户
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
+            <AlertDialogDescription className="space-y-4">
               <p>
                 您确定要删除用户 <strong>{deleteUserName}</strong> 吗？
               </p>
+
+              <div className="space-y-2">
+                <Label htmlFor="delete-password">管理员密码</Label>
+                <Input
+                  id="delete-password"
+                  type="password"
+                  placeholder="请输入管理员密码"
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                  maxLength={16}
+                />
+              </div>
+
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>警告</AlertTitle>
