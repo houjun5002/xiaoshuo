@@ -1,9 +1,11 @@
 import { NextRequest } from 'next/server';
 import { LLMClient, Config, HeaderUtils } from 'coze-coding-dev-sdk';
+import { getSupabaseClient } from '@/storage/database/supabase-client';
 
 interface GenerateRequest {
   type: 'plot' | 'character' | 'polish' | 'outline';
   input: string;
+  token?: string;
 }
 
 const systemPrompts: Record<string, string> = {
@@ -13,9 +15,11 @@ const systemPrompts: Record<string, string> = {
   outline: '你是专业的小说创作助手，擅长搭建小说大纲。请根据用户的需求，生成包含「核心主题、故事线、关键情节节点、人物关系、结局走向」的完整小说大纲，结构清晰，逻辑连贯。',
 };
 
+const FREE_DAILY_QUOTA = 5; // 免费用户每日 5 次
+
 export async function POST(request: NextRequest) {
   try {
-    const { type, input }: GenerateRequest = await request.json();
+    const { type, input, token }: GenerateRequest = await request.json();
 
     // 验证请求参数
     if (!type || !input) {
@@ -33,6 +37,80 @@ export async function POST(request: NextRequest) {
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
+
+    // 获取客户端 IP
+    const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0] ||
+                       request.headers.get('x-real-ip') ||
+                       '127.0.0.1';
+
+    // 检查使用配额
+    const supabase = token ? getSupabaseClient(token) : getSupabaseClient();
+
+    let userId: string | null = null;
+    let dailyQuota = FREE_DAILY_QUOTA;
+
+    // 如果有 token，获取用户 ID 和配额
+    if (token) {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+      if (!userError && user) {
+        userId = user.id;
+
+        // 获取用户资料
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('daily_quota')
+          .eq('id', user.id)
+          .single();
+
+        if (profile) {
+          dailyQuota = profile.daily_quota;
+        }
+      }
+    }
+
+    // 检查今日使用次数
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let query = supabase
+      .from('usage_logs')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', today.toISOString());
+
+    if (userId) {
+      query = query.eq('user_id', userId);
+    } else {
+      query = query.eq('ip_address', ipAddress).is('user_id', null);
+    }
+
+    const { count } = await query;
+    const todayUsage = count || 0;
+
+    // 检查是否超出配额
+    if (todayUsage >= dailyQuota) {
+      const errorData = {
+        error: '今日配额已用尽',
+        requireLogin: !userId,
+        todayUsage,
+        dailyQuota,
+        remaining: 0,
+      };
+
+      return new Response(
+        JSON.stringify(errorData),
+        { status: 429, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // 记录使用
+    await supabase
+      .from('usage_logs')
+      .insert({
+        user_id: userId,
+        ip_address: ipAddress,
+        usage_type: type,
+      });
 
     // 提取请求头并初始化客户端
     const customHeaders = HeaderUtils.extractForwardHeaders(request.headers);

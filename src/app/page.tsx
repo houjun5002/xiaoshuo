@@ -6,7 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PenLine, Loader2, Sparkles } from 'lucide-react';
+import { PenLine, Loader2, Sparkles, User, LogOut, Shield } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { AuthDialog } from '@/components/auth/AuthDialog';
 
 type CreationType = 'plot' | 'character' | 'polish' | 'outline';
 
@@ -45,10 +47,13 @@ const creationTypes: CreationTypeConfig[] = [
 ];
 
 export default function Home() {
+  const { user, token, logout, todayUsage, dailyQuota, fetchUser } = useAuth();
   const [selectedType, setSelectedType] = useState<CreationType | ''>('');
   const [userInput, setUserInput] = useState('');
   const [result, setResult] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [quotaExceeded, setQuotaExceeded] = useState(false);
 
   const handleGenerate = async () => {
     if (!selectedType || !userInput.trim()) {
@@ -57,6 +62,7 @@ export default function Home() {
 
     setIsLoading(true);
     setResult('');
+    setQuotaExceeded(false);
 
     try {
       const response = await fetch('/api/generate', {
@@ -67,11 +73,19 @@ export default function Home() {
         body: JSON.stringify({
           type: selectedType,
           input: userInput,
+          token: token || undefined,
         }),
       });
 
       if (!response.ok) {
-        throw new Error('生成失败');
+        const errorData = await response.json();
+        if (response.status === 429) {
+          setQuotaExceeded(true);
+          setResult(errorData.error || '今日配额已用尽');
+        } else {
+          throw new Error('生成失败');
+        }
+        return;
       }
 
       const reader = response.body?.getReader();
@@ -86,6 +100,9 @@ export default function Home() {
           setResult((prev) => prev + chunk);
         }
       }
+
+      // 生成完成后刷新使用次数
+      await fetchUser();
     } catch (error) {
       console.error('Error:', error);
       setResult('生成失败，请稍后重试。');
@@ -95,22 +112,93 @@ export default function Home() {
   };
 
   const selectedConfig = creationTypes.find((t) => t.value === selectedType);
+  const remaining = dailyQuota - todayUsage;
+  const isNearLimit = remaining <= 3 && remaining > 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        {/* 头部 */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Sparkles className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
-              AI 小说创作助手
-            </h1>
+        {/* 头部 + 用户信息 */}
+        <div className="flex items-start justify-between mb-8">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-4">
+              <Sparkles className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
+                AI 小说创作助手
+              </h1>
+            </div>
+            <p className="text-muted-foreground text-lg">
+              一键生成小说情节、人物、大纲，AI 辅助创作更高效
+            </p>
           </div>
-          <p className="text-muted-foreground text-lg">
-            一键生成小说情节、人物、大纲，AI 辅助创作更高效
-          </p>
+
+          {/* 用户操作区 */}
+          <div className="flex flex-col items-end gap-2">
+            {user ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <User className="w-5 h-5 text-muted-foreground" />
+                  <span className="text-sm font-medium">{user.user_metadata?.username || user.email}</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={logout}
+                  className="gap-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  登出
+                </Button>
+              </>
+            ) : (
+              <Button onClick={() => setShowAuthDialog(true)} className="gap-2">
+                <User className="w-4 h-4" />
+                登录 / 注册
+              </Button>
+            )}
+          </div>
         </div>
+
+        {/* 配额提示卡片 */}
+        <Card className="mb-6 border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <div>
+                  <p className="text-sm font-medium">
+                    今日配额使用
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {user ? '登录用户' : '免费用户'}：{todayUsage} / {dailyQuota} 次
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className={`text-2xl font-bold ${isNearLimit ? 'text-orange-500' : 'text-blue-600 dark:text-blue-400'}`}>
+                  {remaining}
+                </p>
+                <p className="text-xs text-muted-foreground">剩余次数</p>
+              </div>
+            </div>
+            {quotaExceeded && (
+              <div className="mt-4 p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                <p className="text-sm text-orange-600 dark:text-orange-400">
+                  今日配额已用尽！{user ? '请联系管理员增加配额' : '登录后可获得更多使用次数（20次/天）'}
+                </p>
+                {!user && (
+                  <Button
+                    variant="link"
+                    className="p-0 h-auto mt-2"
+                    onClick={() => setShowAuthDialog(true)}
+                  >
+                    立即登录 →
+                  </Button>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* 主内容区 */}
         <div className="grid gap-6">
@@ -163,7 +251,7 @@ export default function Home() {
               {/* 生成按钮 */}
               <Button
                 onClick={handleGenerate}
-                disabled={!selectedType || !userInput.trim() || isLoading}
+                disabled={!selectedType || !userInput.trim() || isLoading || remaining <= 0}
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-6"
                 size="lg"
               >
@@ -179,6 +267,11 @@ export default function Home() {
                   </>
                 )}
               </Button>
+              {remaining <= 0 && !quotaExceeded && (
+                <p className="text-sm text-center text-orange-500">
+                  今日配额已用完，请明天再试或登录获取更多次数
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -216,6 +309,13 @@ export default function Home() {
         <div className="text-center mt-8 text-sm text-muted-foreground">
           <p>基于扣子豆包大模型 | 专为小说创作打造</p>
         </div>
+
+        {/* 认证对话框 */}
+        <AuthDialog
+          open={showAuthDialog}
+          onOpenChange={setShowAuthDialog}
+          defaultTab="login"
+        />
       </div>
     </div>
   );
