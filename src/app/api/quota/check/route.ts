@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 
-const FREE_DAILY_QUOTA = 5; // 免费用户每日 5 次
+const FREE_DAILY_QUOTA = 3; // 免费用户每日 3 次
 
 export async function POST(request: NextRequest) {
   try {
