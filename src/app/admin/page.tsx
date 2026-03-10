@@ -6,7 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
-import { Shield, Users, Activity, TrendingUp, BarChart3, Home, LogOut } from 'lucide-react';
+import { Shield, Users, Activity, TrendingUp, BarChart3, Home, LogOut, Loader2, Trash2, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 interface StatsData {
   userStats: {
@@ -36,6 +38,9 @@ export default function AdminPage() {
   const [adminPassword, setAdminPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [stats, setStats] = useState<StatsData | null>(null);
+  const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
+  const [deleteUserName, setDeleteUserName] = useState<string>('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // 检查用户邮箱是否为管理员
   const isAdminUser = user?.email === ADMIN_EMAIL;
@@ -93,6 +98,42 @@ export default function AdminPage() {
     } catch (error) {
       console.error('Fetch stats error:', error);
       alert('获取统计数据失败');
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteUserId) return;
+
+    setIsDeleting(true);
+
+    try {
+      const adminToken = localStorage.getItem('adminToken');
+      const response = await fetch('/api/admin/user/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: deleteUserId,
+          adminToken,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert(`用户 ${deleteUserName} 删除成功`);
+        setDeleteUserId(null);
+        setDeleteUserName('');
+        fetchStats(); // 刷新列表
+      } else {
+        alert(data.error || '删除用户失败');
+      }
+    } catch (error) {
+      console.error('Delete user error:', error);
+      alert('删除用户失败');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -316,7 +357,7 @@ export default function AdminPage() {
                       key={index}
                       className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
                     >
-                      <div>
+                      <div className="flex-1">
                         <div className="font-medium">
                           {userItem.username || '未设置用户名'}
                         </div>
@@ -324,13 +365,25 @@ export default function AdminPage() {
                           ID: {userItem.id}
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-sm">
-                          每日配额：{userItem.daily_quota} 次
+                      <div className="text-right flex items-center gap-4">
+                        <div>
+                          <div className="text-sm">
+                            每日配额：{userItem.daily_quota} 次
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(userItem.created_at).toLocaleDateString()}
+                          </div>
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          {new Date(userItem.created_at).toLocaleDateString()}
-                        </div>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            setDeleteUserId(userItem.id);
+                            setDeleteUserName(userItem.username || '未设置用户名');
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -345,8 +398,47 @@ export default function AdminPage() {
           </div>
         )}
       </div>
+
+      {/* 删除确认对话框 */}
+      <AlertDialog open={!!deleteUserId} onOpenChange={(open) => !open && setDeleteUserId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="w-5 h-5" />
+              确认删除用户
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                您确定要删除用户 <strong>{deleteUserName}</strong> 吗？
+              </p>
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>警告</AlertTitle>
+                <AlertDescription>
+                  此操作不可撤销！删除后，该用户的所有数据（包括使用记录）将被永久删除。
+                </AlertDescription>
+              </Alert>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteUser}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  删除中...
+                </>
+              ) : (
+                '确认删除'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
-
-import { Loader2 } from 'lucide-react';
