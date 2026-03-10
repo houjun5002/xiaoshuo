@@ -77,12 +77,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setTodayUsage(data.todayUsage);
         setDailyQuota(data.dailyQuota);
       } else {
+        // 如果返回 401，说明用户不存在或已登出
+        const errorData = await response.json().catch(() => ({ error: '未授权' }));
         setUser(null);
         setTodayUsage(0);
         setDailyQuota(3);
+        throw new Error(errorData.error || '未授权');
       }
     } catch (error) {
       console.error('Failed to fetch user:', error);
+      setUser(null);
+      setTodayUsage(0);
+      setDailyQuota(3);
+      throw error;
     }
   };
 
