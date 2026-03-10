@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -114,6 +114,14 @@ export default function Home() {
   const selectedConfig = creationTypes.find((t) => t.value === selectedType);
   const remaining = dailyQuota - todayUsage;
   const isNearLimit = remaining <= 3 && remaining > 0;
+
+  // 监听用户登录状态，登录成功后重置配额超额状态
+  useEffect(() => {
+    if (user && quotaExceeded) {
+      setQuotaExceeded(false);
+      setResult('');
+    }
+  }, [user]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
