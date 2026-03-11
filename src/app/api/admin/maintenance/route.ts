@@ -6,30 +6,17 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseClient();
 
-    // 先尝试获取 id=1 的记录
-    let { data: maintenanceSetting, error } = await supabase
+    // 获取最新的维护模式配置
+    const { data: maintenanceSetting, error } = await supabase
       .from('maintenance_settings')
       .select('maintenance_mode, maintenance_message, updated_at')
-      .eq('id', 1)
+      .order('updated_at', { ascending: false })
+      .limit(1)
       .single();
-
-    // 如果 id=1 的记录不存在，尝试获取第一条记录
-    if (error && error.code === 'PGRST116') {
-      const { data: firstRecord } = await supabase
-        .from('maintenance_settings')
-        .select('maintenance_mode, maintenance_message, updated_at')
-        .limit(1)
-        .single();
-
-      if (firstRecord) {
-        maintenanceSetting = firstRecord;
-        error = null;
-      }
-    }
 
     if (error) {
       // 如果表不存在，返回默认配置
-      if (error.code === '42P01' || error.message.includes('does not exist')) {
+      if (error.code === '42P01' || error.message.includes('does not exist') || error.code === 'PGRST116') {
         return NextResponse.json({
           maintenance_mode: false,
           maintenance_message: '当前功能维护中，请稍后再试',
@@ -111,50 +98,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 获取最新的维护模式记录并更新
+    const { data: latestRecord, error: fetchError } = await supabase
+      .from('maintenance_settings')
+      .select('id')
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (fetchError || !latestRecord) {
+      return NextResponse.json(
+        { error: '配置不存在，请先初始化数据库表' },
+        { status: 404 }
+      );
+    }
+
     // 更新维护模式配置
-    let { data: updatedSetting, error: updateError } = await supabase
+    const { data: updatedSetting, error: updateError } = await supabase
       .from('maintenance_settings')
       .update({
         maintenance_mode,
         maintenance_message: maintenance_message || '当前功能维护中，请稍后再试',
         updated_at: new Date().toISOString(),
       })
-      .eq('id', 1)
+      .eq('id', latestRecord.id)
       .select()
       .single();
-
-    // 如果 id=1 的记录不存在，尝试查找并更新第一条记录
-    if (updateError && updateError.code === 'PGRST116') {
-      const { data: firstRecord } = await supabase
-        .from('maintenance_settings')
-        .select('id')
-        .limit(1)
-        .single();
-
-      if (firstRecord) {
-        ({ data: updatedSetting, error: updateError } = await supabase
-          .from('maintenance_settings')
-          .update({
-            maintenance_mode,
-            maintenance_message: maintenance_message || '当前功能维护中，请稍后再试',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', firstRecord.id)
-          .select()
-          .single());
-      } else {
-        // 表中没有记录，插入一条新记录
-        ({ data: updatedSetting, error: updateError } = await supabase
-          .from('maintenance_settings')
-          .insert({
-            id: 1,
-            maintenance_mode,
-            maintenance_message: maintenance_message || '当前功能维护中，请稍后再试',
-          })
-          .select()
-          .single());
-      }
-    }
 
     if (updateError) {
       return NextResponse.json(

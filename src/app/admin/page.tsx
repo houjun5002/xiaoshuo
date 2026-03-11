@@ -49,6 +49,7 @@ export default function AdminPage() {
   const [isTogglingMaintenance, setIsTogglingMaintenance] = useState(false);
   const [dbNeedsInit, setDbNeedsInit] = useState(false);
   const [isInitializingDb, setIsInitializingDb] = useState(false);
+  const [isCleaningUp, setIsCleaningUp] = useState(false);
 
   // 检查用户邮箱是否为管理员
   const isAdminUser = user?.email === ADMIN_EMAIL;
@@ -253,8 +254,8 @@ export default function AdminPage() {
             '  maintenance_message TEXT DEFAULT \'当前功能维护中，请稍后再试\',\n' +
             '  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n' +
             ');\n\n' +
-            'INSERT INTO maintenance_settings (maintenance_mode, maintenance_message)\n' +
-            'VALUES (FALSE, \'当前功能维护中，请稍后再试\')\n' +
+            'INSERT INTO maintenance_settings (id, maintenance_mode, maintenance_message)\n' +
+            'VALUES (1, FALSE, \'当前功能维护中，请稍后再试\')\n' +
             'ON CONFLICT (id) DO NOTHING;');
         } else {
           alert(data.error || '初始化失败');
@@ -265,6 +266,39 @@ export default function AdminPage() {
       alert('初始化失败');
     } finally {
       setIsInitializingDb(false);
+    }
+  };
+
+  const cleanupDuplicateRecords = async () => {
+    if (!confirm('确定要清理重复的维护模式记录吗？\n\n此操作将只保留最新的一条记录，删除其他重复记录。')) {
+      return;
+    }
+
+    setIsCleaningUp(true);
+
+    try {
+      const response = await fetch('/api/admin/cleanup-maintenance', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert(data.message || '清理成功');
+        // 重新加载维护模式状态
+        setTimeout(() => fetchMaintenanceMode(), 500);
+      } else {
+        alert(data.error || '清理失败');
+      }
+    } catch (error) {
+      console.error('Cleanup records error:', error);
+      alert('清理失败');
+    } finally {
+      setIsCleaningUp(false);
     }
   };
 
@@ -510,6 +544,30 @@ export default function AdminPage() {
                   />
                   <div className="text-xs text-muted-foreground">
                     用户在维护模式下看到的提示信息
+                  </div>
+                </div>
+                <div className="pt-2 border-t">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={cleanupDuplicateRecords}
+                    disabled={isCleaningUp || dbNeedsInit}
+                    className="w-full"
+                  >
+                    {isCleaningUp ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        清理中...
+                      </>
+                    ) : (
+                      <>
+                        <Settings className="w-4 h-4 mr-2" />
+                        清理重复记录
+                      </>
+                    )}
+                  </Button>
+                  <div className="text-xs text-muted-foreground mt-2">
+                    如果开启/关闭维护模式失败，请尝试清理重复记录
                   </div>
                 </div>
               </CardContent>
