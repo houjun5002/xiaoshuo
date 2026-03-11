@@ -47,6 +47,22 @@ export async function POST(request: NextRequest) {
     // 初始化 Supabase 客户端
     const supabase = getSupabaseClient();
 
+    // 对于手机号用户，先检查 profiles 表中是否已存在
+    if (isPhone) {
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('phone', account)
+        .maybeSingle();
+
+      if (existingProfile) {
+        return NextResponse.json(
+          { error: '该手机号已注册' },
+          { status: 400 }
+        );
+      }
+    }
+
     // 注册用户
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: authEmail,
