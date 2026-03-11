@@ -46,20 +46,16 @@ export async function POST(request: NextRequest) {
         .maybeSingle();
 
       userExists = !!phoneProfile;
-    } else {
-      // 邮箱注册：检查 auth.users 表中的 email 字段
-      const { data: emailUser } = await supabase.auth.admin.getUserById(account);
-      // 注意：这里需要管理员权限，实际场景可能需要其他方式
-      // 暂时跳过邮箱检查，只处理手机号
-    }
 
-    // 如果用户不存在，返回友好的提示
-    if (!userExists && isPhone) {
-      return NextResponse.json(
-        { error: '用户不存在，请注册' },
-        { status: 401 }
-      );
+      // 如果用户不存在，返回友好的提示
+      if (!userExists) {
+        return NextResponse.json(
+          { error: '用户不存在，请注册' },
+          { status: 401 }
+        );
+      }
     }
+    // 邮箱登录：直接尝试登录，不需要预先检查（避免使用 admin API）
 
     // 登录用户
     const { data, error } = await supabase.auth.signInWithPassword({
