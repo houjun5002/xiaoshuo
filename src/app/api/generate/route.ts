@@ -99,6 +99,43 @@ export async function POST(request: NextRequest) {
     // 检查使用配额
     const supabase = authToken ? getSupabaseClient(authToken) : getSupabaseClient();
 
+    // 检查维护模式
+    const { data: maintenanceSetting } = await supabase
+      .from('maintenance_settings')
+      .select('maintenance_mode, maintenance_message')
+      .eq('id', 1)
+      .single();
+
+    // 如果开启维护模式，检查用户是否为管理员
+    if (maintenanceSetting?.maintenance_mode) {
+      let isAdmin = false;
+
+      if (authToken) {
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', user.id)
+            .single();
+
+          isAdmin = profile?.is_admin === 1;
+        }
+      }
+
+      // 如果不是管理员，返回维护提示
+      if (!isAdmin) {
+        return new Response(
+          JSON.stringify({
+            error: 'MAINTENANCE_MODE',
+            message: maintenanceSetting.maintenance_message || '当前功能维护中，请稍后再试'
+          }),
+          { status: 503, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     let userId: string | null = null;
     let dailyQuota = FREE_DAILY_QUOTA;
 

@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
-import { Shield, Users, Activity, TrendingUp, BarChart3, Home, LogOut, Loader2, Trash2, AlertCircle } from 'lucide-react';
+import { Shield, Users, Activity, TrendingUp, BarChart3, Home, LogOut, Loader2, Trash2, AlertCircle, Settings } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
@@ -42,6 +42,11 @@ export default function AdminPage() {
   const [deleteUserName, setDeleteUserName] = useState<string>('');
   const [deletePassword, setDeletePassword] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // 维护模式状态
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [maintenanceMessage, setMaintenanceMessage] = useState('当前功能维护中，请稍后再试');
+  const [isTogglingMaintenance, setIsTogglingMaintenance] = useState(false);
 
   // 检查用户邮箱是否为管理员
   const isAdminUser = user?.email === ADMIN_EMAIL;
@@ -149,6 +154,62 @@ export default function AdminPage() {
     localStorage.removeItem('adminToken');
     setIsAuthenticated(false);
     setStats(null);
+  };
+
+  // 加载维护模式状态
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchMaintenanceMode();
+    }
+  }, [isAuthenticated]);
+
+  const fetchMaintenanceMode = async () => {
+    try {
+      const response = await fetch('/api/admin/maintenance', {
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setMaintenanceMode(data.maintenance_mode);
+        setMaintenanceMessage(data.maintenance_message || '当前功能维护中，请稍后再试');
+      }
+    } catch (error) {
+      console.error('Fetch maintenance mode error:', error);
+    }
+  };
+
+  const toggleMaintenanceMode = async () => {
+    setIsTogglingMaintenance(true);
+
+    try {
+      const response = await fetch('/api/admin/maintenance', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          maintenance_mode: !maintenanceMode,
+          maintenance_message: maintenanceMessage,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setMaintenanceMode(data.maintenance_mode);
+        setMaintenanceMessage(data.maintenance_message);
+        alert(data.message);
+      } else {
+        alert(data.error || '切换维护模式失败');
+      }
+    } catch (error) {
+      console.error('Toggle maintenance mode error:', error);
+      alert('切换维护模式失败');
+    } finally {
+      setIsTogglingMaintenance(false);
+    }
   };
 
   // 未登录或不是管理员用户
@@ -314,6 +375,58 @@ export default function AdminPage() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* 维护模式设置 */}
+            <Card className="mb-8 border-orange-200 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-950/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
+                  <Settings className="w-5 h-5" />
+                  维护模式设置
+                </CardTitle>
+                <CardDescription>
+                  开启维护模式后，普通用户无法使用"开始制作"功能，管理员可以正常使用
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium">维护模式状态</div>
+                    <div className="text-sm text-muted-foreground">
+                      {maintenanceMode ? '🔴 已开启' : '🟢 已关闭'}
+                    </div>
+                  </div>
+                  <Button
+                    onClick={toggleMaintenanceMode}
+                    disabled={isTogglingMaintenance}
+                    variant={maintenanceMode ? 'destructive' : 'default'}
+                  >
+                    {isTogglingMaintenance ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        切换中...
+                      </>
+                    ) : (
+                      <>
+                        {maintenanceMode ? '关闭维护模式' : '开启维护模式'}
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="maintenance-message">维护提示信息</Label>
+                  <Input
+                    id="maintenance-message"
+                    value={maintenanceMessage}
+                    onChange={(e) => setMaintenanceMessage(e.target.value)}
+                    placeholder="请输入维护提示信息"
+                    maxLength={100}
+                  />
+                  <div className="text-xs text-muted-foreground">
+                    用户在维护模式下看到的提示信息
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* 访问趋势 */}
             <Card className="mb-8">
