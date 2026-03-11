@@ -83,7 +83,8 @@ export default function Home() {
           setQuotaExceeded(true);
           setResult(errorData.error || '今日配额已用尽');
         } else {
-          throw new Error('生成失败');
+          // 显示后端返回的错误信息
+          setResult(errorData.error || '生成失败，请稍后重试。');
         }
         return;
       }
