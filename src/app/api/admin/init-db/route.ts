@@ -40,9 +40,12 @@ export async function POST(request: NextRequest) {
     // 尝试插入默认配置（如果表不存在会报错）
     const { data: insertData, error: insertError } = await supabase
       .from('maintenance_settings')
-      .insert({
+      .upsert({
+        id: 1,  // 显式指定 id 为 1
         maintenance_mode: false,
         maintenance_message: '当前功能维护中，请稍后再试',
+      }, {
+        onConflict: 'id',  // 如果 id 冲突，则更新现有记录
       })
       .select()
       .single();
@@ -88,8 +91,8 @@ export async function POST(request: NextRequest) {
             `);
 
             await client.query(`
-              INSERT INTO maintenance_settings (maintenance_mode, maintenance_message)
-              VALUES (FALSE, '当前功能维护中，请稍后再试')
+              INSERT INTO maintenance_settings (id, maintenance_mode, maintenance_message)
+              VALUES (1, FALSE, '当前功能维护中，请稍后再试')
               ON CONFLICT (id) DO NOTHING;
             `);
 
@@ -113,8 +116,8 @@ export async function POST(request: NextRequest) {
                 '  maintenance_message TEXT DEFAULT \'当前功能维护中，请稍后再试\',\n' +
                 '  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n' +
                 ');\n\n' +
-                'INSERT INTO maintenance_settings (maintenance_mode, maintenance_message)\n' +
-                'VALUES (FALSE, \'当前功能维护中，请稍后再试\')\n' +
+                'INSERT INTO maintenance_settings (id, maintenance_mode, maintenance_message)\n' +
+                'VALUES (1, FALSE, \'当前功能维护中，请稍后再试\')\n' +
                 'ON CONFLICT (id) DO NOTHING;',
               requiresManualSetup: true,
             },

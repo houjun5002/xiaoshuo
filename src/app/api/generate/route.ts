@@ -100,11 +100,24 @@ export async function POST(request: NextRequest) {
     const supabase = authToken ? getSupabaseClient(authToken) : getSupabaseClient();
 
     // 检查维护模式
-    const { data: maintenanceSetting } = await supabase
+    let { data: maintenanceSetting } = await supabase
       .from('maintenance_settings')
       .select('maintenance_mode, maintenance_message')
       .eq('id', 1)
       .single();
+
+    // 如果 id=1 的记录不存在，尝试获取第一条记录
+    if (!maintenanceSetting) {
+      const { data: firstRecord } = await supabase
+        .from('maintenance_settings')
+        .select('maintenance_mode, maintenance_message')
+        .limit(1)
+        .single();
+
+      if (firstRecord) {
+        maintenanceSetting = firstRecord;
+      }
+    }
 
     // 如果开启维护模式，检查用户是否为管理员
     if (maintenanceSetting?.maintenance_mode) {
