@@ -13,10 +13,27 @@ export async function GET(request: NextRequest) {
       .eq('id', 1)
       .single();
 
-    if (error || !maintenanceSetting) {
+    if (error) {
+      // 如果表不存在，返回默认配置
+      if (error.code === '42P01' || error.message.includes('does not exist')) {
+        return NextResponse.json({
+          maintenance_mode: false,
+          maintenance_message: '当前功能维护中，请稍后再试',
+          updated_at: new Date().toISOString(),
+          note: '请先初始化数据库表：POST /api/admin/init-db',
+        });
+      }
+
       return NextResponse.json(
-        { error: '获取维护模式状态失败' },
+        { error: '获取维护模式状态失败', details: error.message },
         { status: 500 }
+      );
+    }
+
+    if (!maintenanceSetting) {
+      return NextResponse.json(
+        { error: '配置不存在，请先初始化数据库表' },
+        { status: 404 }
       );
     }
 
@@ -28,7 +45,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Get maintenance mode error:', error);
     return NextResponse.json(
-      { error: '获取维护模式状态失败' },
+      { error: '获取维护模式状态失败', details: String(error) },
       { status: 500 }
     );
   }
@@ -92,10 +109,17 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
-    if (updateError || !updatedSetting) {
+    if (updateError) {
       return NextResponse.json(
-        { error: '更新维护模式失败' },
+        { error: '更新维护模式失败，请先初始化数据库表', details: updateError.message },
         { status: 500 }
+      );
+    }
+
+    if (!updatedSetting) {
+      return NextResponse.json(
+        { error: '配置不存在，请先初始化数据库表' },
+        { status: 404 }
       );
     }
 
