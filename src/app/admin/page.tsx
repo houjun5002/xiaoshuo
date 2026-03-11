@@ -47,6 +47,8 @@ export default function AdminPage() {
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState('当前功能维护中，请稍后再试');
   const [isTogglingMaintenance, setIsTogglingMaintenance] = useState(false);
+  const [dbNeedsInit, setDbNeedsInit] = useState(false);
+  const [isInitializingDb, setIsInitializingDb] = useState(false);
 
   // 检查用户邮箱是否为管理员
   const isAdminUser = user?.email === ADMIN_EMAIL;
@@ -173,6 +175,13 @@ export default function AdminPage() {
         const data = await response.json();
         setMaintenanceMode(data.maintenance_mode);
         setMaintenanceMessage(data.maintenance_message || '当前功能维护中，请稍后再试');
+
+        // 检查是否需要初始化数据库表
+        if (data.note && data.note.includes('请先初始化数据库表')) {
+          setDbNeedsInit(true);
+        } else {
+          setDbNeedsInit(false);
+        }
       }
     } catch (error) {
       console.error('Fetch maintenance mode error:', error);
@@ -203,12 +212,59 @@ export default function AdminPage() {
         alert(data.message);
       } else {
         alert(data.error || '切换维护模式失败');
+        // 如果提示需要初始化数据库，显示初始化按钮
+        if (data.error && data.error.includes('请先初始化数据库表')) {
+          setDbNeedsInit(true);
+        }
       }
     } catch (error) {
       console.error('Toggle maintenance mode error:', error);
       alert('切换维护模式失败');
     } finally {
       setIsTogglingMaintenance(false);
+    }
+  };
+
+  const initializeDatabase = async () => {
+    setIsInitializingDb(true);
+
+    try {
+      const response = await fetch('/api/admin/init-db', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert('数据库表初始化成功！');
+        setDbNeedsInit(false);
+        // 重新加载维护模式状态
+        setTimeout(() => fetchMaintenanceMode(), 500);
+      } else {
+        if (data.requiresManualSetup) {
+          alert('配置表不存在，需要手动创建。\n\n请在 Supabase SQL Editor 中执行以下 SQL：\n\n' +
+            'CREATE TABLE IF NOT EXISTS maintenance_settings (\n' +
+            '  id SERIAL PRIMARY KEY,\n' +
+            '  maintenance_mode BOOLEAN DEFAULT FALSE,\n' +
+            '  maintenance_message TEXT DEFAULT \'当前功能维护中，请稍后再试\',\n' +
+            '  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n' +
+            ');\n\n' +
+            'INSERT INTO maintenance_settings (maintenance_mode, maintenance_message)\n' +
+            'VALUES (FALSE, \'当前功能维护中，请稍后再试\')\n' +
+            'ON CONFLICT (id) DO NOTHING;');
+        } else {
+          alert(data.error || '初始化失败');
+        }
+      }
+    } catch (error) {
+      console.error('Initialize database error:', error);
+      alert('初始化失败');
+    } finally {
+      setIsInitializingDb(false);
     }
   };
 
@@ -388,6 +444,17 @@ export default function AdminPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* 数据库初始化提示 */}
+                {dbNeedsInit && (
+                  <Alert className="bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800">
+                    <AlertCircle className="h-4 w-4 text-red-600" />
+                    <AlertTitle className="text-red-600">需要初始化数据库表</AlertTitle>
+                    <AlertDescription className="text-red-600">
+                      检测到维护模式配置表不存在，需要先初始化数据库表才能使用维护模式功能。
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="font-medium">维护模式状态</div>
@@ -395,22 +462,41 @@ export default function AdminPage() {
                       {maintenanceMode ? '🔴 已开启' : '🟢 已关闭'}
                     </div>
                   </div>
-                  <Button
-                    onClick={toggleMaintenanceMode}
-                    disabled={isTogglingMaintenance}
-                    variant={maintenanceMode ? 'destructive' : 'default'}
-                  >
-                    {isTogglingMaintenance ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        切换中...
-                      </>
-                    ) : (
-                      <>
-                        {maintenanceMode ? '关闭维护模式' : '开启维护模式'}
-                      </>
+                  <div className="flex gap-2">
+                    {dbNeedsInit && (
+                      <Button
+                        onClick={initializeDatabase}
+                        disabled={isInitializingDb}
+                        variant="outline"
+                        className="border-red-200 text-red-600 hover:bg-red-50"
+                      >
+                        {isInitializingDb ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            初始化中...
+                          </>
+                        ) : (
+                          '初始化数据库表'
+                        )}
+                      </Button>
                     )}
-                  </Button>
+                    <Button
+                      onClick={toggleMaintenanceMode}
+                      disabled={isTogglingMaintenance || dbNeedsInit}
+                      variant={maintenanceMode ? 'destructive' : 'default'}
+                    >
+                      {isTogglingMaintenance ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          切换中...
+                        </>
+                      ) : (
+                        <>
+                          {maintenanceMode ? '关闭维护模式' : '开启维护模式'}
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="maintenance-message">维护提示信息</Label>
@@ -420,6 +506,7 @@ export default function AdminPage() {
                     onChange={(e) => setMaintenanceMessage(e.target.value)}
                     placeholder="请输入维护提示信息"
                     maxLength={100}
+                    disabled={dbNeedsInit}
                   />
                   <div className="text-xs text-muted-foreground">
                     用户在维护模式下看到的提示信息
