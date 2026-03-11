@@ -17,6 +17,28 @@ const systemPrompts: Record<string, string> = {
 
 const FREE_DAILY_QUOTA = 3; // 免费用户每日 3 次
 
+// LLM 审核系统提示词
+const MODERATION_SYSTEM_PROMPT = `你是一个专业的内容审核助手。请判断用户输入的小说创作需求是否包含以下违规内容：
+
+**违规内容类型：**
+1. 色情低俗：露骨的性描写、性暴力、性虐待等
+2. 暴力恐怖：血腥暴力、恐怖袭击、极端主义等
+3. 政治敏感：分裂国家、颠覆政权、攻击领导人等
+4. 犯罪内容：毒品制作、赌博犯罪、诈骗犯罪等
+5. 歧视仇恨：种族歧视、民族歧视、地域歧视等
+6. 隐私侵犯：个人信息泄露、造谣诽谤等
+
+**判断标准：**
+- 如果创作需求明确要求生成违规内容，判断为违规
+- 如果创作需求正常，只是题材涉及某些领域，判断为合规
+- 对于正常的历史、悬疑、推理等题材，不应误判为违规
+
+**请只返回 JSON 格式结果（不要包含任何其他文字）：**
+{
+  "is_violating": true/false,
+  "reason": "简要说明违规原因（如果合规则返回空字符串）"
+}`;
+
 // 敏感词列表
 const SENSITIVE_KEYWORDS = [
   // ====== 国家分裂 / 颠覆 / 领导人攻击 / 历史虚无 ======
@@ -79,6 +101,47 @@ function containsSensitiveContent(text: string): boolean {
   return false;
 }
 
+// LLM 辅助审核函数
+async function moderateContentWithLLM(
+  input: string,
+  customHeaders: Record<string, string>
+): Promise<{ is_violating: boolean; reason: string }> {
+  try {
+    const config = new Config();
+    const client = new LLMClient(config, customHeaders);
+
+    const messages = [
+      { role: 'system' as const, content: MODERATION_SYSTEM_PROMPT },
+      { role: 'user' as const, content: `请审核以下小说创作需求是否违规：\n\n${input}` },
+    ];
+
+    const response = await client.invoke(messages, {
+      temperature: 0.3, // 降低随机性，提高判断准确性
+      model: 'doubao-seed-1-6-flash-250615', // 使用快速模型，降低成本
+    });
+
+    // 解析 JSON 响应
+    const cleanedResponse = response.content.trim();
+    const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
+
+    if (jsonMatch) {
+      const result = JSON.parse(jsonMatch[0]);
+      return {
+        is_violating: result.is_violating || false,
+        reason: result.reason || '',
+      };
+    }
+
+    // 如果无法解析 JSON，返回不违规（避免误杀）
+    console.error('Failed to parse moderation response:', cleanedResponse);
+    return { is_violating: false, reason: '' };
+  } catch (error) {
+    console.error('LLM moderation error:', error);
+    // 审核失败时，默认为合规（避免误杀）
+    return { is_violating: false, reason: '' };
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { type, input, token }: GenerateRequest = await request.json();
@@ -91,10 +154,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 检查内容是否包含敏感词
+    // 第一步：关键词过滤（快速）
     if (containsSensitiveContent(input)) {
       return new Response(
         JSON.stringify({ error: '您的创作需求涉及敏感内容，请换一个需求' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // 提取请求头（用于 LLM 审核和生成）
+    const customHeaders = HeaderUtils.extractForwardHeaders(request.headers);
+
+    // 第二步：LLM 辅助审核（智能）
+    const moderationResult = await moderateContentWithLLM(input, customHeaders);
+    if (moderationResult.is_violating) {
+      return new Response(
+        JSON.stringify({
+          error: '您的创作需求涉及敏感内容，请换一个需求',
+          reason: moderationResult.reason
+        }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
@@ -226,8 +304,7 @@ export async function POST(request: NextRequest) {
         usage_type: type,
       });
 
-    // 提取请求头并初始化客户端
-    const customHeaders = HeaderUtils.extractForwardHeaders(request.headers);
+    // 初始化 LLM 客户端（使用之前提取的 customHeaders）
     const config = new Config();
     const client = new LLMClient(config, customHeaders);
 
