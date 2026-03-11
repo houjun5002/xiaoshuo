@@ -61,6 +61,26 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
+
+      // 额外检查：尝试登录来验证 Supabase Auth 中是否真的存在该用户
+      // 这是为了绕过 Supabase Auth 的缓存问题
+      try {
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: authEmail,
+          password,
+        });
+
+        // 如果登录成功，说明用户确实存在于 Supabase Auth 中
+        if (!signInError && signInData.user) {
+          return NextResponse.json(
+            { error: '该手机号/邮箱已注册' },
+            { status: 400 }
+          );
+        }
+      } catch (e) {
+        // 如果登录时出错（比如用户不存在），继续注册流程
+        console.log('Login check failed, continuing registration');
+      }
     }
 
     // 注册用户
