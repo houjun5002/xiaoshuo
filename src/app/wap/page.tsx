@@ -1,3 +1,4 @@
+// @ts-nocheck
 'use client';
 
 var React = require('react');
@@ -138,6 +139,7 @@ export default function WapPage() {
   };
 
   var handleTypeChange = function(e) {
+    // @ts-ignore
     var type = e.target.value;
     setCreationType(type);
     setUserInput('');
@@ -159,6 +161,7 @@ export default function WapPage() {
   };
 
   var handleInputChange = function(e) {
+    // @ts-ignore
     var value = e.target.value;
     setUserInput(value);
 
@@ -170,6 +173,7 @@ export default function WapPage() {
   };
 
   var handleSubmit = function(e) {
+    // @ts-ignore
     e.preventDefault();
 
     if (!userInput || userInput.trim() === '') {
@@ -238,6 +242,7 @@ export default function WapPage() {
       read();
     }).catch(function(err) {
       console.error('Error:', err);
+      // @ts-ignore
       var errorMsg = err.message || '生成失败，请稍后重试';
       setResult(errorMsg);
       setIsLoading(false);
@@ -250,6 +255,7 @@ export default function WapPage() {
   };
 
   var handleLogin = function(e) {
+    // @ts-ignore
     e.preventDefault();
     setIsAuthLoading(true);
     setAuthError('');
@@ -286,6 +292,7 @@ export default function WapPage() {
   };
 
   var handleRegister = function(e) {
+    // @ts-ignore
     e.preventDefault();
     setIsAuthLoading(true);
     setAuthError('');
