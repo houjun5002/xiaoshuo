@@ -1,0 +1,374 @@
+/**
+ * WAP 兼容样式表
+ * 支持 Android 4.0+, iOS 9+ 等老手机浏览器
+ * 使用传统 CSS，不使用现代特性
+ */
+
+/* ==================== 全局重置 ==================== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #333;
+  background-color: #f5f5f5;
+}
+
+/* ==================== 容器 ==================== */
+.wap-container {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 10px;
+}
+
+/* ==================== 卡片 ==================== */
+.wap-card {
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  margin-bottom: 15px;
+  overflow: hidden;
+}
+
+.wap-card-header {
+  background-color: #f9f9f9;
+  border-bottom: 1px solid #ddd;
+  padding: 12px 15px;
+}
+
+.wap-card-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.wap-card-body {
+  padding: 15px;
+}
+
+/* ==================== 表单 ==================== */
+.wap-form-group {
+  margin-bottom: 15px;
+}
+
+.wap-label {
+  display: block;
+  font-size: 14px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.wap-input,
+.wap-textarea,
+.wap-select {
+  width: 100%;
+  padding: 10px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  -webkit-appearance: none;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+.wap-input:focus,
+.wap-textarea:focus,
+.wap-select:focus {
+  outline: none;
+  border-color: #1976d2;
+}
+
+.wap-textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+/* ==================== 按钮 ==================== */
+.wap-btn {
+  display: inline-block;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: bold;
+  text-align: center;
+  color: #fff;
+  background-color: #1976d2;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.wap-btn:hover {
+  background-color: #1565c0;
+  text-decoration: none;
+}
+
+.wap-btn:active {
+  background-color: #0d47a1;
+}
+
+.wap-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.wap-btn-full {
+  width: 100%;
+  padding: 12px 20px;
+  font-size: 16px;
+}
+
+.wap-btn-small {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+/* ==================== 提示框 ==================== */
+.wap-alert {
+  padding: 10px 15px;
+  margin-bottom: 15px;
+  border-radius: 3px;
+  font-size: 14px;
+}
+
+.wap-alert-error {
+  background-color: #ffebee;
+  color: #c62828;
+  border: 1px solid #ffcdd2;
+}
+
+.wap-alert-success {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
+}
+
+.wap-alert-info {
+  background-color: #e3f2fd;
+  color: #1565c0;
+  border: 1px solid #bbdefb;
+}
+
+.wap-alert-warning {
+  background-color: #fff3e0;
+  color: #e65100;
+  border: 1px solid #ffe0b2;
+}
+
+/* ==================== 加载动画 ==================== */
+.wap-loading {
+  text-align: center;
+  padding: 20px;
+}
+
+.wap-spinner {
+  display: inline-block;
+  width: 30px;
+  height: 30px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #1976d2;
+  border-radius: 50%;
+  -webkit-animation: wap-spin 1s linear infinite;
+  animation: wap-spin 1s linear infinite;
+}
+
+@-webkit-keyframes wap-spin {
+  0% { -webkit-transform: rotate(0deg); }
+  100% { -webkit-transform: rotate(360deg); }
+}
+
+@keyframes wap-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ==================== 结果区域 ==================== */
+.wap-result {
+  background-color: #f9f9f9;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  padding: 15px;
+  margin-top: 15px;
+  min-height: 100px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* ==================== 配额显示 ==================== */
+.wap-quota {
+  background-color: #e3f2fd;
+  border: 1px solid #bbdefb;
+  border-radius: 3px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.wap-quota-info {
+  display: table;
+  width: 100%;
+}
+
+.wap-quota-left {
+  display: table-cell;
+  vertical-align: middle;
+}
+
+.wap-quota-right {
+  display: table-cell;
+  vertical-align: middle;
+  text-align: right;
+  width: 120px;
+}
+
+.wap-quota-label {
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.wap-quota-desc {
+  font-size: 13px;
+  color: #666;
+}
+
+.wap-quota-number {
+  font-size: 24px;
+  font-weight: bold;
+  color: #ff9800;
+}
+
+.wap-quota-text {
+  font-size: 12px;
+  color: #666;
+}
+
+/* ==================== 弹窗 ==================== */
+.wap-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  display: none;
+}
+
+.wap-modal-overlay.show {
+  display: block;
+}
+
+.wap-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  -webkit-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+  background-color: #fff;
+  border-radius: 5px;
+  padding: 20px;
+  width: 320px;
+  max-width: 90%;
+  max-height: 90%;
+  overflow-y: auto;
+  z-index: 10000;
+  display: none;
+}
+
+.wap-modal.show {
+  display: block;
+}
+
+.wap-modal-header {
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+.wap-modal-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.wap-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 24px;
+  height: 24px;
+  line-height: 24px;
+  text-align: center;
+  font-size: 18px;
+  color: #666;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+/* ==================== 选项卡 ==================== */
+.wap-tabs {
+  border-bottom: 2px solid #ddd;
+  margin-bottom: 15px;
+}
+
+.wap-tab-list {
+  display: block;
+  overflow: hidden;
+}
+
+.wap-tab-item {
+  display: inline-block;
+  padding: 10px 20px;
+  font-size: 14px;
+  color: #666;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  margin-bottom: -2px;
+}
+
+.wap-tab-item.active {
+  color: #1976d2;
+  border-bottom-color: #1976d2;
+}
+
+/* ==================== 工具类 ==================== */
+.wap-text-center {
+  text-align: center;
+}
+
+.wap-text-right {
+  text-align: right;
+}
+
+.wap-mb-10 {
+  margin-bottom: 10px;
+}
+
+.wap-mb-15 {
+  margin-bottom: 15px;
+}
+
+.wap-mt-10 {
+  margin-top: 10px;
+}
+
+.wap-mt-15 {
+  margin-top: 15px;
+}
+
+.wap-hidden {
+  display: none;
+}
